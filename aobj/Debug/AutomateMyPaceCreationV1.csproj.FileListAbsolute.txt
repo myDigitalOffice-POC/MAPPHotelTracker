@@ -1,0 +1,9 @@
+C:\Users\amar\OneDrive\Documents\GitHub\AutomateMyPaceCreationV1\bin\Debug\AutomateMyPaceCreationV1.exe.config
+C:\Users\amar\OneDrive\Documents\GitHub\AutomateMyPaceCreationV1\bin\Debug\AutomateMyPaceCreationV1.exe
+C:\Users\amar\OneDrive\Documents\GitHub\AutomateMyPaceCreationV1\bin\Debug\AutomateMyPaceCreationV1.pdb
+C:\Users\amar\OneDrive\Documents\GitHub\AutomateMyPaceCreationV1\obj\Debug\AutomateMyPaceCreationV1.csprojAssemblyReference.cache
+C:\Users\amar\OneDrive\Documents\GitHub\AutomateMyPaceCreationV1\obj\Debug\AutomateMyPaceCreationV1.Properties.Resources.resources
+C:\Users\amar\OneDrive\Documents\GitHub\AutomateMyPaceCreationV1\obj\Debug\AutomateMyPaceCreationV1.csproj.GenerateResource.cache
+C:\Users\amar\OneDrive\Documents\GitHub\AutomateMyPaceCreationV1\obj\Debug\AutomateMyPaceCreationV1.csproj.CoreCompileInputs.cache
+C:\Users\amar\OneDrive\Documents\GitHub\AutomateMyPaceCreationV1\obj\Debug\AutomateMyPaceCreationV1.exe
+C:\Users\amar\OneDrive\Documents\GitHub\AutomateMyPaceCreationV1\obj\Debug\AutomateMyPaceCreationV1.pdb
