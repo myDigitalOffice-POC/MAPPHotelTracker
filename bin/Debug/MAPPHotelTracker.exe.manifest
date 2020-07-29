@@ -150,14 +150,14 @@
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="MAPPHotelTracker.exe" size="48088">
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="MAPPHotelTracker.exe" size="56280">
       <assemblyIdentity name="MAPPHotelTracker" version="1.0.0.0" language="neutral" processorArchitecture="msil" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>NxsUFFd/rWzOCEaloqwOQzhipm/K8oL55g0Z8nvXDs0=</dsig:DigestValue>
+        <dsig:DigestValue>yajC1VEoujQhzjJBTmP6NR/8y1rV+l8Sxn9o1+BQBXk=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>

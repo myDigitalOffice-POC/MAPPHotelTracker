@@ -22,6 +22,8 @@ using MAPPHotelTracker.Models;
 using System.Xml.Serialization;
 using Org.BouncyCastle.Bcpg.Sig;
 using Org.BouncyCastle.Asn1.X509.Qualified;
+using System.Data;
+using System.Drawing;
 
 namespace MAPPOnBoardingStats
 {
@@ -34,7 +36,7 @@ namespace MAPPOnBoardingStats
         Dictionary<string, int> OrgIDLkp = new Dictionary<string, int>();
         Dictionary<string, int> HotelIDLkp = new Dictionary<string, int>();
         List<AuditMessage> TheAuditMessages = new List<AuditMessage>();
-
+        Dictionary<string, Tuple<int, int>> HotelEmailToGroupdHotelId = new Dictionary<string, Tuple<int, int>>();
 
 
 
@@ -93,11 +95,12 @@ namespace MAPPOnBoardingStats
                 }
         }
 
-        private void RetrieveTAMessages()
+        private void RetrieveTAMessages(string receivedConnectionString)
         {
-            string strGConnectionString = @"Data Source=13.56.146.174;UID=amar;PWD=pntvRwm2u5JPUCPm;DATABASE=ThinkAutomationV4";
+            string strGConnectionString = receivedConnectionString;
 
             SqlDataReader rdr = null;
+           
 
             // Get the list of Hotels for the Current Group
             using (SqlConnection conn = new SqlConnection(strGConnectionString))
@@ -107,10 +110,12 @@ namespace MAPPOnBoardingStats
                     // Add a varaible for the date and build the date to be passed to the SQL
                     // Since the TA is on UTC, we need to add the 4 hrs.
                     // Four hr difference, the date is the current date
+                    var today = DateTime.Today.ToString("yyyy-MM-dd");
+                    var tomorrow = DateTime.Today.AddDays(1).ToString("yyyy-MM-dd"); 
                     string strSQL = "select ProcessedDate,MessageDate,Subject,FromAddress,";
                     strSQL = strSQL + " ToAddress,AttachmentNames,Headers from MessageStore";
-                    strSQL = strSQL + " where MessageDate >= '2020-07-20 04:00:01'  ";
-                    strSQL = strSQL + " and MessageDate <= '2020-07-21 03:59:59'";
+                    strSQL = strSQL + $" where MessageDate >= '{today} 04:00:01'  ";
+                    strSQL = strSQL + $" and MessageDate <= '{tomorrow} 03:59:59'";
                     strSQL = strSQL + " and (upper(Subject) like 'REVENUE REPORT%' or upper(Subject) like 'BOOKING STATISTICS%' ";
                     strSQL = strSQL + " or upper(Subject) like '%ON THE BOOKS%'";
                     strSQL = strSQL + " or upper(Subject) like '%BOOKING%' or upper(Subject) ";
@@ -124,8 +129,17 @@ namespace MAPPOnBoardingStats
                     while (rdr.Read())
                     {
                         var a1 = new AuditMessage();
-                        a1.GroupId = 9999;
-                        a1.HotelId = 9999;
+                        var groupId = 9999;
+                        var hotelId = 9999;
+                        var fromEmailAddress = rdr[3].ToString();
+                        if (HotelEmailToGroupdHotelId.ContainsKey(fromEmailAddress.Trim().ToUpper()))
+                        {
+                            var groupHotelId = HotelEmailToGroupdHotelId[fromEmailAddress.Trim().ToUpper()];
+                            groupId = groupHotelId.Item1;
+                            hotelId = groupHotelId.Item2;
+                        }
+                        a1.GroupId = groupId;
+                        a1.HotelId = hotelId;
                         a1.TAProcessedDateTime = rdr[0].ToString();
                         a1.TAMessageDateTime = rdr[1].ToString();
                         a1.MYPProcessedDateTime = "TBD";
@@ -134,7 +148,7 @@ namespace MAPPOnBoardingStats
                         a1.MAPPControlCodeId = "TBD";
                         a1.MAPPLastActionStatus = "TBD";
                         a1.Subject = rdr[2].ToString();
-                        a1.FromAddress = rdr[3].ToString();
+                        a1.FromAddress = fromEmailAddress;
                         a1.ToAddress = rdr[4].ToString();
                         a1.AttachmentNames = rdr[5].ToString();
                         a1.Headers = rdr[6].ToString();
@@ -211,6 +225,7 @@ namespace MAPPOnBoardingStats
         public Form1()
         {
             InitializeComponent();
+            this.AutoSize = true;
         }
         private void GetPaceRptIArray()
         {
@@ -408,8 +423,9 @@ namespace MAPPOnBoardingStats
 
         private void BtnGetAllSubmittals_Click(object sender, EventArgs e)
         {
-            
-            
+            //Initialize the Search Column Name Combo Box
+            CBoxColumnName.Text = "Group Name";
+
             //Would need the Lookup values only on the first time around
             if (OrgIDLkp.Count == 0)
             {
@@ -532,6 +548,8 @@ namespace MAPPOnBoardingStats
                                 dataGridView1.Columns.Add("EmailSearch", "Email Search Result");
                                 //MessageBox.Show(row[SearchKeyIndex].ToString());
                                 dataGridView1.Columns.Add("Search Key", row[SearchKeyIndex].ToString());
+                                dataGridView1.Columns.Add("Errors", "Errors");
+                                dataGridView1.Columns.Add("Resolutions", "Resolutions");
                                 //var GridViewRowCount = 1;
                                 //AddTestSampleRow();
                             }
@@ -582,11 +600,21 @@ namespace MAPPOnBoardingStats
                                     {
                                         intGroupID = 9999;
                                     }
+                                    
+                                    var hotelMdoEmailAddress = row[HotelMDOEmailIndex].ToString();
+                                    if(!string.IsNullOrWhiteSpace(hotelMdoEmailAddress))
+                                    {
+                                        if(!HotelEmailToGroupdHotelId.ContainsKey(hotelMdoEmailAddress.Trim().ToUpper()))
+                                        {
+                                            HotelEmailToGroupdHotelId[hotelMdoEmailAddress.Trim().ToUpper()] = new Tuple<int, int>(intGroupID, intHotelID);
+                                        }
+                                    }
+
                                     dataGridView1.Rows[GridViewRowCount].Cells[0].Value = intGroupID;
                                     dataGridView1.Rows[GridViewRowCount].Cells[1].Value = row[GroupNameIndex].ToString();
                                     dataGridView1.Rows[GridViewRowCount].Cells[2].Value = row[GroupEmailIndex].ToString();
                                     strEmailPwd = GetGroupEmailCreds(row[GroupEmailIndex].ToString());
-                                    dataGridView1.Rows[GridViewRowCount].Cells[3].Value = row[HotelMDOEmailIndex].ToString();
+                                    dataGridView1.Rows[GridViewRowCount].Cells[3].Value = hotelMdoEmailAddress;
                                     dataGridView1.Rows[GridViewRowCount].Cells[4].Value = intHotelID;
                                     dataGridView1.Rows[GridViewRowCount].Cells[5].Value = row[HotelCodeIndex].ToString();
                                     dataGridView1.Rows[GridViewRowCount].Cells[6].Value = row[HotelNameIndex].ToString();
@@ -646,7 +674,16 @@ namespace MAPPOnBoardingStats
                     }
                 }
 
+                TheAuditMessages.Clear();
 
+                RetrieveTAMessages(@"Data Source=13.56.146.174;UID=amar;PWD=pntvRwm2u5JPUCPm;DATABASE=ThinkAutomationV4");
+
+               //  RetrieveTAMessages(@"Data Source=13.56.146.174;UID=amar;PWD=pntvRwm2u5JPUCPm;DATABASE=ThinkAutomationV4");
+
+               // RetrieveTAMessages(@"Data Source=13.56.146.174;UID=amar;PWD=pntvRwm2u5JPUCPm;DATABASE=ThinkAutomationV4");
+
+
+                UpdateGroupAndHotelIds();
             }
             catch (Exception ex)
             {
@@ -684,16 +721,7 @@ namespace MAPPOnBoardingStats
             Application.Exit();
         }
 
-        private void BtnProcessAllGroups_Click(object sender, EventArgs e)
-        {
-            RetrieveTAMessages();
-
-            UpdateGroupAndHotelIds();
-
-        }
-        
-
-       
+      
         private void BtnEmailAuditTrail_Click(object sender, EventArgs e)
         {
             
@@ -703,14 +731,17 @@ namespace MAPPOnBoardingStats
 
         private void UpdateGroupAndHotelIds()
         {
-            MessageBox.Show("AuditRow Count:" + TheAuditMessages.Count.ToString());
+            //MessageBox.Show("AuditRow Count:" + TheAuditMessages.Count.ToString());
+            TextBoxTAMessage.Text = "TA Processed Messages Count: " + TheAuditMessages.Count.ToString();
         }
 
         private void AddAuditRows()
         {
             var GridViewRowCount = 0;
+            
             if (TheAuditMessages.Count() > 1)
             {
+                dataGridViewAuditRows.Columns.Clear();
                 dataGridViewAuditRows.Columns.Add("Group ID", "Group ID");
                 dataGridViewAuditRows.Columns.Add("Hotel ID", "Hotel Id");
                 dataGridViewAuditRows.Columns.Add("TAProcessedDateTime", "TAProcessedDateTime");
@@ -721,22 +752,41 @@ namespace MAPPOnBoardingStats
                 dataGridViewAuditRows.Columns.Add("MAPPControlCodeId", "MAPPControlCodeId");
                 dataGridViewAuditRows.Columns.Add("MAPPLastActionStatus", "MAPPLastActionStatus");
                 dataGridViewAuditRows.Columns.Add("Subject", "Subject");
-                dataGridViewAuditRows.Columns.Add("FromAddress", "FromAddress");
-                dataGridViewAuditRows.Columns.Add("ToAddress", "ToAddress");
+                dataGridViewAuditRows.Columns.Add("From Address", "From Address");
+                dataGridViewAuditRows.Columns.Add("To Address", "To Address");
                 dataGridViewAuditRows.Columns.Add("AttachmentNames", "AttachmentNames");
                 dataGridViewAuditRows.Columns.Add("Headers", "Headers");
-
-                for (int i = 0; i < TheAuditMessages.Count; i++)                
+                var selectedRowFilter = false;
+                int selectedGroupId = -1;
+                if (dataGridView1.SelectedRows.Count > 0)
                 {
+                    selectedRowFilter = true;
+                    var selectedFirstRow = dataGridView1.SelectedRows[0];
+                    var groupdIdString = selectedFirstRow.Cells["Group ID"]?.Value?.ToString();
+                    if (!string.IsNullOrWhiteSpace(groupdIdString))
+                    {
+                        int.TryParse(groupdIdString, out selectedGroupId);
+                    }
+
+                }
+                dataGridViewAuditRows.Rows.Clear();
+                for (int i = 0; i < TheAuditMessages.Count; i++)                
+                {                  
 
                     var row = TheAuditMessages[i];
-
+                    if (selectedRowFilter)
+                    {
+                        if (row.GroupId != selectedGroupId)
+                        {
+                            continue;
+                        }
+                    }
                     dataGridViewAuditRows.Rows.Add();
 
                     //MessageBox.Show(row.ToAddress.ToString());
 
                     dataGridViewAuditRows.Rows[GridViewRowCount].Cells[0].Value = row.GroupId.ToString();
-                    dataGridViewAuditRows.Rows[GridViewRowCount].Cells[1].Value = row.GroupId.ToString();
+                    dataGridViewAuditRows.Rows[GridViewRowCount].Cells[1].Value = row.HotelId.ToString();
                     dataGridViewAuditRows.Rows[GridViewRowCount].Cells[2].Value = row.TAProcessedDateTime.ToString();
                     dataGridViewAuditRows.Rows[GridViewRowCount].Cells[3].Value = row.TAMessageDateTime.ToString();
                     dataGridViewAuditRows.Rows[GridViewRowCount].Cells[4].Value = row.MYPProcessedDateTime.ToString();
@@ -1299,6 +1349,266 @@ namespace MAPPOnBoardingStats
         private void btnGetAuditRows_Click(object sender, EventArgs e)
         {
             AddAuditRows();
+        }
+
+        private void TxtContainsText_TextChanged(object sender, EventArgs e)
+        {
+            var searchText = CommonSearchTextBox.Text.Trim();
+            FilterGrid(searchText, CBoxColumnName.Text, dataGridView1);
+        }
+
+       
+        private const int MinimumSearchTextLength = 2;
+
+        private void FilterGrid(string searchText, string headerName, DataGridView dataGridView)
+        {
+            if(string.IsNullOrWhiteSpace(headerName))
+            {
+                MessageBox.Show("Please select Search By Option");
+                return;
+            }
+            if (!string.IsNullOrEmpty(searchText) && searchText.Length >= MinimumSearchTextLength)
+            {              
+                foreach (DataGridViewRow r in dataGridView.Rows)
+                {
+                    if (r.Cells[headerName].Value?.ToString().IndexOf(searchText, StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        dataGridView.Rows[r.Index].Visible = true;
+                    }
+                    else
+                    {
+                        dataGridView.CurrentCell = null;
+                        dataGridView.Rows[r.Index].Visible = false;
+                    }
+                }
+            }
+            else
+            {
+                foreach (DataGridViewRow r in dataGridView.Rows)
+                {
+                    dataGridView.Rows[r.Index].Visible = true;
+                }               
+            }
+        }
+
+        private void dataGridView1_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
+        {
+            var highlightText = CommonSearchTextBox.Text.Trim();
+            var highlightColumn = CBoxColumnName.Text;
+            if (!string.IsNullOrWhiteSpace(highlightText) && !string.IsNullOrWhiteSpace(highlightColumn) && highlightText.Length >= MinimumSearchTextLength)
+            {
+                HighlightSearchText(e, highlightText, highlightColumn, dataGridView1);
+            }
+        }
+
+        private void HighlightSearchText(DataGridViewCellPaintingEventArgs e, string highlightText, string highlightColumn, DataGridView dataGridView)
+        {
+            if (!string.IsNullOrWhiteSpace(highlightColumn) && !string.IsNullOrWhiteSpace(highlightText))
+            {
+                // High light and searching apply over selective fields of grid.  
+                if (e.RowIndex > -1 && e.ColumnIndex > -1 && dataGridView.Columns[e.ColumnIndex].Name == highlightColumn)
+                {
+                    // Check data for search  
+                    if (!String.IsNullOrWhiteSpace(highlightText))
+                    {
+                        String gridCellValue = e.FormattedValue.ToString();
+                        // check the index of search text into grid cell.  
+                        int startIndexInCellValue = gridCellValue.IndexOf(highlightText, StringComparison.OrdinalIgnoreCase);
+                        // IF search text is exists inside grid cell then startIndexInCellValue value will be greater then 0 or equal to 0  
+                        if (startIndexInCellValue >= 0)
+                        {
+                            e.Handled = true;
+                            e.PaintBackground(e.CellBounds, true);
+                            //the highlite rectangle  
+                            Rectangle hl_rect = new Rectangle();
+                            hl_rect.Y = e.CellBounds.Y + 2;
+                            hl_rect.Height = e.CellBounds.Height - 5;
+                            //find the size of the text before the search word in grid cell data.  
+                            String sBeforeSearchword = gridCellValue.Substring(0, startIndexInCellValue);
+                            //size of the search word in the grid cell data  
+                            String sSearchWord = gridCellValue.Substring(startIndexInCellValue, highlightText.Length);
+                            Size s1 = TextRenderer.MeasureText(e.Graphics, sBeforeSearchword, e.CellStyle.Font, e.CellBounds.Size);
+                            Size s2 = TextRenderer.MeasureText(e.Graphics, sSearchWord, e.CellStyle.Font, e.CellBounds.Size);
+                            if (s1.Width > 5)
+                            {
+                                hl_rect.X = e.CellBounds.X + s1.Width - 5;
+                                hl_rect.Width = s2.Width - 6;
+                            }
+                            else
+                            {
+                                hl_rect.X = e.CellBounds.X + 2;
+                                hl_rect.Width = s2.Width - 6;
+                            }
+                            //color for showing highlighted text in grid cell  
+                            SolidBrush hl_brush;
+                            hl_brush = new SolidBrush(System.Drawing.Color.Yellow);
+                            //paint the background behind the search word  
+                            e.Graphics.FillRectangle(hl_brush, hl_rect);
+                            hl_brush.Dispose();
+                            e.PaintContent(e.CellBounds);
+                        }
+                    }
+                }
+            }
+        }
+
+        private void dataGridView1_CellMouseClick(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            if (dataGridView1.SelectedCells.Count > 0)
+                dataGridView1.ContextMenuStrip = contextMenuStrip1;
+        }
+
+        
+
+        private void copyToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var sourceControl = (sender as ContextMenuStrip).SourceControl;
+            var dataGridViewSource = sourceControl as DataGridView;
+            if (dataGridViewSource != null)
+            {
+                CopyToClipboard(dataGridViewSource);
+            }
+        }
+
+        private void pasteToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var sourceControl = (sender as ContextMenuStrip).SourceControl;
+            var dataGridViewSource = sourceControl as DataGridView;
+            //Perform paste Operation
+            PasteClipboardValue(dataGridViewSource);
+        }
+
+        private void CopyToClipboard(DataGridView dataGridViewSource)
+        {
+           // MessageBox.Show(dataGridView1.SelectedCells.GetType.);
+            //MessageBox.Show(dataGridView1.GetClipboardContent().ToString());
+            //Copy to clipboard
+            DataObject dataObj = dataGridViewSource.GetClipboardContent();
+            if (dataObj != null)
+                Clipboard.SetDataObject(dataObj);
+        }
+
+        private void PasteClipboardValue(DataGridView dataGridViewSource)
+        {
+            //Show Error if no cell is selected
+            if (dataGridViewSource.SelectedCells.Count == 0)
+            {
+                MessageBox.Show("Please select a cell", "Paste",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            //Get the starting Cell
+            DataGridViewCell startCell = GetStartCell(dataGridViewSource);
+            //Get the clipboard value in a dictionary
+            Dictionary<int, Dictionary<int, string>> cbValue =
+                    ClipBoardValues(Clipboard.GetText());
+
+            int iRowIndex = startCell.RowIndex;
+            foreach (int rowKey in cbValue.Keys)
+            {
+                int iColIndex = startCell.ColumnIndex;
+                foreach (int cellKey in cbValue[rowKey].Keys)
+                {
+                    //Check if the index is within the limit
+                    if (iColIndex <= dataGridViewSource.Columns.Count - 1
+                    && iRowIndex <= dataGridViewSource.Rows.Count - 1)
+                    {
+                        DataGridViewCell cell = dataGridViewSource[iColIndex, iRowIndex];
+
+                        //Copy to selected cells if 'chkPasteToSelectedCells' is checked
+                        //if ((chkPasteToSelectedCells.Checked && cell.Selected) ||
+                        //    (!chkPasteToSelectedCells.Checked))
+                        //    cell.Value = cbValue[rowKey][cellKey];
+                    }
+                    iColIndex++;
+                }
+                iRowIndex++;
+            }
+        }
+
+        private DataGridViewCell GetStartCell(DataGridView dgView)
+        {
+            //get the smallest row,column index
+            if (dgView.SelectedCells.Count == 0)
+                return null;
+
+            int rowIndex = dgView.Rows.Count - 1;
+            int colIndex = dgView.Columns.Count - 1;
+
+            foreach (DataGridViewCell dgvCell in dgView.SelectedCells)
+            {
+                if (dgvCell.RowIndex < rowIndex)
+                    rowIndex = dgvCell.RowIndex;
+                if (dgvCell.ColumnIndex < colIndex)
+                    colIndex = dgvCell.ColumnIndex;
+            }
+
+            return dgView[colIndex, rowIndex];
+        }
+
+        private Dictionary<int, Dictionary<int, string>> ClipBoardValues(string clipboardValue)
+        {
+            Dictionary<int, Dictionary<int, string>>
+            copyValues = new Dictionary<int, Dictionary<int, string>>();
+
+            String[] lines = clipboardValue.Split('\n');
+
+            for (int i = 0; i <= lines.Length - 1; i++)
+            {
+                copyValues[i] = new Dictionary<int, string>();
+                String[] lineContent = lines[i].Split('\t');
+
+                //if an empty cell value copied, then set the dictionary with an empty string
+                //else Set value to dictionary
+                if (lineContent.Length == 0)
+                    copyValues[i][0] = string.Empty;
+                else
+                {
+                    for (int j = 0; j <= lineContent.Length - 1; j++)
+                        copyValues[i][j] = lineContent[j];
+                }
+            }
+            return copyValues;
+        }
+        
+
+        private void CBoxColumnName_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            //MessageBox.Show("Will Initialize the Following Column to be the Search Column." + CBoxColumnName.Text);
+        }
+
+        private void contextMenuStrip1_Opening(object sender, CancelEventArgs e)
+        {
+            //MessageBox.Show("Please select a cell");
+        }
+       
+
+        private void AuditGridFilterTextBox_TextChanged(object sender, EventArgs e)
+        {
+            var searchText = AuditGridFilterTextBox.Text.Trim();
+            FilterGrid(searchText, AuditGridFilterComboBox.Text, dataGridViewAuditRows);
+        }
+
+        private void AuditGridFilterComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            
+        }
+
+        private void dataGridViewAuditRows_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
+        {
+            var highlightText = AuditGridFilterTextBox.Text.Trim();
+            var highlightColumn = AuditGridFilterComboBox.Text;
+            if (!string.IsNullOrWhiteSpace(highlightText) && !string.IsNullOrWhiteSpace(highlightColumn) && highlightText.Length >= MinimumSearchTextLength)
+            {
+                HighlightSearchText(e, highlightText, highlightColumn, dataGridViewAuditRows);
+            }
+        }
+
+        private void dataGridViewAuditRows_CellMouseClick(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            if (dataGridViewAuditRows.SelectedCells.Count > 0)
+                dataGridViewAuditRows.ContextMenuStrip = contextMenuStrip1;
         }
     }
 
