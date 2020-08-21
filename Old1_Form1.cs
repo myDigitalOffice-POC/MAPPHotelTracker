@@ -2,9 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Configuration;
-using System.Data.Common;
 using System.Data.SqlClient;
-using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -42,14 +40,13 @@ namespace MAPPOnBoardingStats
         private static string[] Scopes = {
             GmailService.Scope.GmailReadonly
         };
-
-        private List<string> GroupNameList = new List<string>();
+        
         private void InitializeOrgLookUp()
         {
             string strGConnectionString = @"Data Source=169.53.175.125;UID=mypuser;PWD=IKWWaISbjuOBx9w;DATABASE=Perspective";
 
             SqlDataReader rdr = null;
-            GroupNameList?.Clear();
+
             // Get the list of Hotels for the Current Group
             using (SqlConnection conn = new SqlConnection(strGConnectionString))
                 try
@@ -73,16 +70,12 @@ namespace MAPPOnBoardingStats
                         else
                         {
                             OrgIDLkp.Add(rdr[0].ToString().ToUpper().Trim(), (int)rdr[1]);
-                            GroupNameList.Add(rdr[0].ToString().Trim());                            
+                            CBoxGroupName.Items.Add(rdr[0].ToString().Trim());
                         }
 
                         //MessageBox.Show(HotelIDLkp.Count.ToString() + ":: HoteCode: " + rdr[0].ToString() + ", ID: " + rdr[1].ToString());
                         //Console.WriteLine("HOTELCODE and Name: " + rdr[0].ToString() + " :: " +  rdr[1].ToString());
                     }
-                    CBoxGroupName.DataSource = null;
-                    var bs = new BindingSource();
-                    bs.DataSource = GroupNameList;
-                    CBoxGroupName.DataSource = GroupNameList;
                 }
                 finally
                 {
@@ -160,13 +153,6 @@ namespace MAPPOnBoardingStats
                         TheAuditMessages.Add(a1);
                         //rdr.NextResult();
                     }
-                }
-                catch(Exception ex)
-                {
-                    DbConnectionStringBuilder builder = new DbConnectionStringBuilder();
-                    builder.ConnectionString = strGConnectionString;
-                    builder.Remove("PWD");
-                    MessageBox.Show($"{builder.ConnectionString}{Environment.NewLine}{ex.Message}");
                 }
                 finally
                 {
@@ -401,7 +387,7 @@ namespace MAPPOnBoardingStats
 
         private string GetPMSReportName(string strPMSName)
         {
-            var strReportNames = "Report"; 
+            var strReportNames = "Report";
             var strAllPMSNames = "ReportName";
 
             foreach (PRIInfo PRI in ThisPRIInfo)
@@ -437,7 +423,7 @@ namespace MAPPOnBoardingStats
         {
             //Initialize the Search Column Name Combo Box
             CBoxColumnName.Text = "Group Name";
-           
+            GroupNameAutoCompleteBox.AutoCompleteCustomSource?.Clear();
             //Would need the Lookup values only on the first time around
             if (OrgIDLkp.Count == 0)
             {
@@ -508,7 +494,7 @@ namespace MAPPOnBoardingStats
                         var headers = values[0];
                         var GroupNameIndex = headers.IndexOf("Hotel Management Group");
                         var GroupEmailIndex = headers.IndexOf("@mdo GROUP email address");
-                        var PMSIndex = headers.IndexOf("PMS");
+                        //var PMSIndex = headers.IndexOf("PMS");
                         var PaceReportIndex = headers.IndexOf("Pace Report");
                         var HotelCodeIndex = headers.IndexOf("Hotel Code");
                         var HotelNameIndex = headers.IndexOf("Hotel Name");
@@ -550,7 +536,6 @@ namespace MAPPOnBoardingStats
 
                                 dataGridView1.Columns.Add("Group Email PD", "Group Email PD");
                                 // Changed from PMSIndex to PaceReportIndex
-                                dataGridView1.Columns.Add("PMS", row[PMSIndex].ToString());
                                 dataGridView1.Columns.Add("Group PMS", row[PaceReportIndex].ToString());
                                 dataGridView1.Columns.Add("PMS Report Name1", "PMS Report Name1");
                                 dataGridView1.Columns.Add("PMS Report Name2", "PMS Report Name2");
@@ -636,8 +621,7 @@ namespace MAPPOnBoardingStats
                                     dataGridView1.Rows[GridViewRowCount].Cells[5].Value = row[HotelCodeIndex].ToString();
                                     dataGridView1.Rows[GridViewRowCount].Cells[6].Value = row[HotelNameIndex].ToString();
                                     dataGridView1.Rows[GridViewRowCount].Cells[7].Value = strEmailPwd;
-                                    dataGridView1.Rows[GridViewRowCount].Cells[8].Value = row[PMSIndex].ToString();
-                                    dataGridView1.Rows[GridViewRowCount].Cells[9].Value = row[PaceReportIndex].ToString();
+                                    dataGridView1.Rows[GridViewRowCount].Cells[8].Value = row[PaceReportIndex].ToString();
                                     //strReportName = GetPMSReportName(row[PaceReportIndex].ToString());
                                     strReportName = row[PaceReportIndex].ToString();
                                     //strSearchKey = row[SearchKeyIndex].ToString(); 
@@ -656,13 +640,13 @@ namespace MAPPOnBoardingStats
                                         //if (splittedReports.Length > 2) { if (splittedReports[2] != "") { strReportName3 = splittedReports[2]; } else { strReportName3 = ""; } }
 
 
-                                    dataGridView1.Rows[GridViewRowCount].Cells[10].Value = strReportName1;
-                                    dataGridView1.Rows[GridViewRowCount].Cells[11].Value = strReportName2;
-                                    dataGridView1.Rows[GridViewRowCount].Cells[12].Value = strReportName3;
-                                    dataGridView1.Rows[GridViewRowCount].Cells[13].Value = row[SubmissionMethodIndex].ToString();
-                                    dataGridView1.Rows[GridViewRowCount].Cells[14].Value = row[SubmittingPaceIndex].ToString();
-                                    dataGridView1.Rows[GridViewRowCount].Cells[15].Value = "FALSE";
-                                    dataGridView1.Rows[GridViewRowCount].Cells[16].Value = (i + 1).ToString();
+                                    dataGridView1.Rows[GridViewRowCount].Cells[9].Value = strReportName1;
+                                    dataGridView1.Rows[GridViewRowCount].Cells[10].Value = strReportName2;
+                                    dataGridView1.Rows[GridViewRowCount].Cells[11].Value = strReportName3;
+                                    dataGridView1.Rows[GridViewRowCount].Cells[12].Value = row[SubmissionMethodIndex].ToString();
+                                    dataGridView1.Rows[GridViewRowCount].Cells[13].Value = row[SubmittingPaceIndex].ToString();
+                                    dataGridView1.Rows[GridViewRowCount].Cells[14].Value = "FALSE";
+                                    dataGridView1.Rows[GridViewRowCount].Cells[15].Value = (i + 1).ToString();
                                     //dataGridView1.Rows[GridViewRowCount].Cells["SheetRowIndex"].Value = (i + 1).ToString();
                                     if (row.Count == 36)
                                     { 
@@ -691,7 +675,10 @@ namespace MAPPOnBoardingStats
                                 }
                             }
                         }
-                        textBoxNonSubmittalCount.Text = "Hotels Submitting Report is: " + GridViewRowCount.ToString();                       
+                        textBoxNonSubmittalCount.Text = "Hotels Submitting Report is: " + GridViewRowCount.ToString();
+                        AutoCompleteStringCollection col = new AutoCompleteStringCollection();
+                        col.AddRange(uniqueGroupName.ToArray());
+                        GroupNameAutoCompleteBox.AutoCompleteCustomSource = col;
                         foreach (DataGridViewRow row in dataGridView1.Rows)
                         {
                             row.HeaderCell.Value = (row.Index + 1).ToString();
@@ -708,14 +695,10 @@ namespace MAPPOnBoardingStats
                         MessageBox.Show("No data found.");
                     }
                 }
-                
+
                 TheAuditMessages.Clear();
 
                 RetrieveTAMessages(@"Data Source=13.56.146.174;UID=amar;PWD=pntvRwm2u5JPUCPm;DATABASE=ThinkAutomationV4");
-
-                RetrieveTAMessages(@"Data Source=169.53.175.123;UID=amar;PWD=6Vh6uKkGuRWdUeTg;DATABASE=ThinkAutomationV4");
-
-                RetrieveTAMessages(@"Data Source=158.85.68.245;UID=amar;PWD=gJ26YcT3kykkaWTv;DATABASE=ThinkAutomationV4");
 
 
                 UpdateGroupAndHotelIds();
@@ -727,7 +710,7 @@ namespace MAPPOnBoardingStats
             }
 
         }
-        
+
 
         
             
@@ -805,9 +788,6 @@ namespace MAPPOnBoardingStats
 
                 }
                 dataGridViewAuditRows.Rows.Clear();
-                string strGConnectionString = ConfigurationManager.AppSettings.Get("AuditTrialDBConnectionString");
-                SqlConnection con = new SqlConnection(strGConnectionString);
-                con.Open();
                 for (int i = 0; i < TheAuditMessages.Count; i++)                
                 {                  
 
@@ -820,33 +800,7 @@ namespace MAPPOnBoardingStats
                         }
                     }
                     dataGridViewAuditRows.Rows.Add();
-                    SqlCommand command = new SqlCommand("SELECT TOP 1 ControlCodeId, LastActionStatus, MAPPDate, InputProcessCompleteDateTime" +
-                        " FROM [MAPPControlTable] WHERE TargetHotelId=@HotelIdInput" +
-                        " ORDER BY UpdateTimeStamp DESC", con);
-                    command.Parameters.AddWithValue("@HotelIdInput", row.HotelId);
-                    
-                    using (SqlDataReader reader = command.ExecuteReader())
-                    {
-                        if (reader.Read())
-                        {
-                            try
-                            {
-                                var mappDateString = reader["MAPPDate"]?.ToString();
-                                if (!string.IsNullOrWhiteSpace(mappDateString))
-                                {
-                                    var mappDate = Convert.ToDateTime(mappDateString);
-                                    dataGridViewAuditRows.Rows[GridViewRowCount].Cells["MAPPControlDate"].Value = mappDate.ToShortDateString();
-                                }
-                                dataGridViewAuditRows.Rows[GridViewRowCount].Cells["MAPPControlCodeId"].Value = reader["ControlCodeId"]?.ToString();
-                                dataGridViewAuditRows.Rows[GridViewRowCount].Cells["MAPPControlProcessedDateTime"].Value = reader["InputProcessCompleteDateTime"]?.ToString();
-                                dataGridViewAuditRows.Rows[GridViewRowCount].Cells["MAPPLastActionStatus"].Value = reader["LastActionStatus"]?.ToString();
-                            }
-                            catch(IndexOutOfRangeException ex)
-                            {
-                                
-                            }
-                        }
-                    }
+
                     //MessageBox.Show(row.ToAddress.ToString());
 
                     dataGridViewAuditRows.Rows[GridViewRowCount].Cells[0].Value = row.GroupId.ToString();
@@ -854,6 +808,10 @@ namespace MAPPOnBoardingStats
                     dataGridViewAuditRows.Rows[GridViewRowCount].Cells[2].Value = row.TAProcessedDateTime.ToString();
                     dataGridViewAuditRows.Rows[GridViewRowCount].Cells[3].Value = row.TAMessageDateTime.ToString();
                     dataGridViewAuditRows.Rows[GridViewRowCount].Cells[4].Value = row.MYPProcessedDateTime.ToString();
+                    dataGridViewAuditRows.Rows[GridViewRowCount].Cells[5].Value = row.MAPPControlProcessedDateTime.ToString();
+                    dataGridViewAuditRows.Rows[GridViewRowCount].Cells[6].Value = row.MAPPControlDate.ToString();
+                    dataGridViewAuditRows.Rows[GridViewRowCount].Cells[7].Value = row.MAPPControlCodeId.ToString();
+                    dataGridViewAuditRows.Rows[GridViewRowCount].Cells[8].Value = row.MAPPLastActionStatus.ToString();
                     dataGridViewAuditRows.Rows[GridViewRowCount].Cells[9].Value = row.Subject.ToString();
                     dataGridViewAuditRows.Rows[GridViewRowCount].Cells[10].Value = row.FromAddress.ToString();
                     dataGridViewAuditRows.Rows[GridViewRowCount].Cells[11].Value = row.ToAddress.ToString();
@@ -862,13 +820,12 @@ namespace MAPPOnBoardingStats
 
                     GridViewRowCount = GridViewRowCount + 1;
                 }
-                con.Close();    
+                
             }
             else
             {
                 MessageBox.Show("There are no Audit Records to Display, have the AuditRecords been retrieved from the Database?");
             }
-            
         }
 
         private void UpdateAuditTrail(RowUpdateMode rowUpdateMode)
@@ -1639,45 +1596,13 @@ namespace MAPPOnBoardingStats
                         copyValues[i][j] = lineContent[j];
                 }
             }
-            return copyValues; 
+            return copyValues;
         }
         
 
         private void CBoxColumnName_SelectedIndexChanged(object sender, EventArgs e)
         {
             //MessageBox.Show("Will Initialize the Following Column to be the Search Column." + CBoxColumnName.Text);
-            var selectedItem = CBoxColumnName.SelectedItem;
-            if (selectedItem != null)
-            {
-                var headerName = selectedItem.ToString();
-                CBoxGroupName.DataSource = null;
-                if (headerName == "Group Name")
-                {
-                    var bs = new BindingSource();
-                    bs.DataSource = GroupNameList;
-                    CBoxGroupName.DataSource = GroupNameList;
-                }
-                else
-                {
-                    var uniqueColumnValue = new HashSet<string>();
-                    for (int rowIndex = 0; rowIndex < dataGridView1.Rows.Count; rowIndex++)
-                    {
-                        var row = dataGridView1.Rows[rowIndex];
-                        var columnValue = row.Cells[headerName]?.Value?.ToString();
-                        if (!string.IsNullOrWhiteSpace(columnValue))
-                        {
-                            if (!uniqueColumnValue.Contains(columnValue))
-                            {
-                                uniqueColumnValue.Add(columnValue);
-                            }
-                        }
-                    }
-                    var bs = new BindingSource();
-                    bs.DataSource = uniqueColumnValue.ToList();
-                    CBoxGroupName.DataSource = bs;
-                }
-                CBoxGroupName.SelectedIndex = -1;
-            }
         }
 
         private void contextMenuStrip1_Opening(object sender, CancelEventArgs e)
@@ -1730,20 +1655,21 @@ namespace MAPPOnBoardingStats
         private void textBoxNonSubmittalCount_TextChanged(object sender, EventArgs e)
         {
 
-        }       
+        }
+
+        private void GroupNameAutoCompleteBox_TextChanged(object sender, EventArgs e)
+        {
+            if (GroupNameAutoCompleteBox.AutoCompleteCustomSource.Contains(GroupNameAutoCompleteBox.Text) || string.IsNullOrWhiteSpace(GroupNameAutoCompleteBox.Text))
+            {
+                var searchText = GroupNameAutoCompleteBox.Text;
+                FilterGrid(searchText, "Group Name", dataGridView1);
+            }
+        }
 
         private void CBoxGroupName_SelectedIndexChanged(object sender, EventArgs e)
         {
-            // CBoxColumnName.SelectedItem = CBoxColumnName.Items[0];
-            CommonSearchTextBox.Text = CBoxGroupName.SelectedItem?.ToString();
-        }
-
-        private void CBoxGroupName_TextChanged(object sender, EventArgs e)
-        {
-            if (string.IsNullOrWhiteSpace(CBoxGroupName.SelectedItem?.ToString()))
-            {
-                CommonSearchTextBox.Text = CBoxGroupName.Text?.ToString();
-            }
+            CBoxColumnName.SelectedItem = CBoxColumnName.Items[0];
+            CommonSearchTextBox.Text = CBoxGroupName.SelectedItem.ToString();
         }
     }
 

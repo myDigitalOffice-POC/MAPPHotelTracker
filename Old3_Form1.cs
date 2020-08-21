@@ -42,14 +42,13 @@ namespace MAPPOnBoardingStats
         private static string[] Scopes = {
             GmailService.Scope.GmailReadonly
         };
-
-        private List<string> GroupNameList = new List<string>();
+        
         private void InitializeOrgLookUp()
         {
             string strGConnectionString = @"Data Source=169.53.175.125;UID=mypuser;PWD=IKWWaISbjuOBx9w;DATABASE=Perspective";
 
             SqlDataReader rdr = null;
-            GroupNameList?.Clear();
+
             // Get the list of Hotels for the Current Group
             using (SqlConnection conn = new SqlConnection(strGConnectionString))
                 try
@@ -73,16 +72,12 @@ namespace MAPPOnBoardingStats
                         else
                         {
                             OrgIDLkp.Add(rdr[0].ToString().ToUpper().Trim(), (int)rdr[1]);
-                            GroupNameList.Add(rdr[0].ToString().Trim());                            
+                            CBoxGroupName.Items.Add(rdr[0].ToString().Trim());
                         }
 
                         //MessageBox.Show(HotelIDLkp.Count.ToString() + ":: HoteCode: " + rdr[0].ToString() + ", ID: " + rdr[1].ToString());
                         //Console.WriteLine("HOTELCODE and Name: " + rdr[0].ToString() + " :: " +  rdr[1].ToString());
                     }
-                    CBoxGroupName.DataSource = null;
-                    var bs = new BindingSource();
-                    bs.DataSource = GroupNameList;
-                    CBoxGroupName.DataSource = GroupNameList;
                 }
                 finally
                 {
@@ -401,7 +396,7 @@ namespace MAPPOnBoardingStats
 
         private string GetPMSReportName(string strPMSName)
         {
-            var strReportNames = "Report"; 
+            var strReportNames = "Report";
             var strAllPMSNames = "ReportName";
 
             foreach (PRIInfo PRI in ThisPRIInfo)
@@ -437,7 +432,7 @@ namespace MAPPOnBoardingStats
         {
             //Initialize the Search Column Name Combo Box
             CBoxColumnName.Text = "Group Name";
-           
+            GroupNameAutoCompleteBox.AutoCompleteCustomSource?.Clear();
             //Would need the Lookup values only on the first time around
             if (OrgIDLkp.Count == 0)
             {
@@ -691,7 +686,10 @@ namespace MAPPOnBoardingStats
                                 }
                             }
                         }
-                        textBoxNonSubmittalCount.Text = "Hotels Submitting Report is: " + GridViewRowCount.ToString();                       
+                        textBoxNonSubmittalCount.Text = "Hotels Submitting Report is: " + GridViewRowCount.ToString();
+                        AutoCompleteStringCollection col = new AutoCompleteStringCollection();
+                        col.AddRange(uniqueGroupName.ToArray());
+                        GroupNameAutoCompleteBox.AutoCompleteCustomSource = col;
                         foreach (DataGridViewRow row in dataGridView1.Rows)
                         {
                             row.HeaderCell.Value = (row.Index + 1).ToString();
@@ -1639,45 +1637,13 @@ namespace MAPPOnBoardingStats
                         copyValues[i][j] = lineContent[j];
                 }
             }
-            return copyValues; 
+            return copyValues;
         }
         
 
         private void CBoxColumnName_SelectedIndexChanged(object sender, EventArgs e)
         {
-            //MessageBox.Show("Will Initialize the Following Column to be the Search Column." + CBoxColumnName.Text);
-            var selectedItem = CBoxColumnName.SelectedItem;
-            if (selectedItem != null)
-            {
-                var headerName = selectedItem.ToString();
-                CBoxGroupName.DataSource = null;
-                if (headerName == "Group Name")
-                {
-                    var bs = new BindingSource();
-                    bs.DataSource = GroupNameList;
-                    CBoxGroupName.DataSource = GroupNameList;
-                }
-                else
-                {
-                    var uniqueColumnValue = new HashSet<string>();
-                    for (int rowIndex = 0; rowIndex < dataGridView1.Rows.Count; rowIndex++)
-                    {
-                        var row = dataGridView1.Rows[rowIndex];
-                        var columnValue = row.Cells[headerName]?.Value?.ToString();
-                        if (!string.IsNullOrWhiteSpace(columnValue))
-                        {
-                            if (!uniqueColumnValue.Contains(columnValue))
-                            {
-                                uniqueColumnValue.Add(columnValue);
-                            }
-                        }
-                    }
-                    var bs = new BindingSource();
-                    bs.DataSource = uniqueColumnValue.ToList();
-                    CBoxGroupName.DataSource = bs;
-                }
-                CBoxGroupName.SelectedIndex = -1;
-            }
+                //MessageBox.Show("Will Initialize the Following Column to be the Search Column." + CBoxColumnName.Text);
         }
 
         private void contextMenuStrip1_Opening(object sender, CancelEventArgs e)
@@ -1730,20 +1696,21 @@ namespace MAPPOnBoardingStats
         private void textBoxNonSubmittalCount_TextChanged(object sender, EventArgs e)
         {
 
-        }       
+        }
+
+        private void GroupNameAutoCompleteBox_TextChanged(object sender, EventArgs e)
+        {
+            if (GroupNameAutoCompleteBox.AutoCompleteCustomSource.Contains(GroupNameAutoCompleteBox.Text) || string.IsNullOrWhiteSpace(GroupNameAutoCompleteBox.Text))
+            {
+                var searchText = GroupNameAutoCompleteBox.Text;
+                FilterGrid(searchText, "Group Name", dataGridView1);
+            }
+        }
 
         private void CBoxGroupName_SelectedIndexChanged(object sender, EventArgs e)
         {
-            // CBoxColumnName.SelectedItem = CBoxColumnName.Items[0];
-            CommonSearchTextBox.Text = CBoxGroupName.SelectedItem?.ToString();
-        }
-
-        private void CBoxGroupName_TextChanged(object sender, EventArgs e)
-        {
-            if (string.IsNullOrWhiteSpace(CBoxGroupName.SelectedItem?.ToString()))
-            {
-                CommonSearchTextBox.Text = CBoxGroupName.Text?.ToString();
-            }
+            CBoxColumnName.SelectedItem = CBoxColumnName.Items[0];
+            CommonSearchTextBox.Text = CBoxGroupName.SelectedItem.ToString();
         }
     }
 
